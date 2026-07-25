@@ -44,6 +44,12 @@ pgdata/
 Thumbs.db
 desktop.ini
 
+# ---- AI 에이전트 로컬 규칙 ----
+# 작업 규칙 메모라 저장소에 올리지 않는다.
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json
+
 # ---- Logs & coverage ----
 *.log
 npm-debug.log*
