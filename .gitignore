@@ -1,0 +1,51 @@
+# ---- Dependencies ----
+node_modules/
+.pnpm-store/
+
+# ---- Build output ----
+dist/
+build/
+out/
+.next/
+.turbo/
+**/target/
+src-tauri/gen/
+*.tsbuildinfo
+
+# ---- Secrets & env ----
+# .env 계열은 절대 커밋 금지. 예시 파일만 추적한다.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Tauri updater 서명 개인키 — 유출 시 위조 업데이트 배포가 가능해진다
+*.minisign
+*.priv
+tauri-private.key*
+
+# ---- Local data ----
+# 클라이언트 로컬 카운트 DB / Postgres 볼륨
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+/data/
+pgdata/
+
+# ---- Editor / OS ----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Logs & coverage ----
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
