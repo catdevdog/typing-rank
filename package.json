@@ -1,0 +1,11 @@
+{
+  "name": "typing-rank",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "desktop:dev": "pnpm --filter @typing-rank/desktop dev"
+  }
+}

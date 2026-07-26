@@ -10,6 +10,8 @@ out/
 .turbo/
 **/target/
 src-tauri/gen/
+# tauri-build이 크레이트 루트에 생성하는 스키마 (poc/overlay 등)
+**/gen/schemas/
 *.tsbuildinfo
 
 # ---- Secrets & env ----
