@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>TypingRank Overlay</title>
+    <style>
+      /* 창 배경은 완전 투명해야 한다. 여기가 사각형으로 보이면 투명 창이
+         실패한 것이다 — Phase 0 스파이크에서 정상 동작을 확인했다. */
+      html,
+      body {
+        background: transparent !important;
+      }
+
+      /* --- 표시 타입 -------------------------------------------------------
+         창 크기는 Rust의 Variant::size()가 정한다. 이 레이아웃을 고치면
+         저 수치도 같이 봐야 한다 (src-tauri/src/overlay.rs). */
+
+      /* 미니멀 — 게임 중용. 숫자만, 대신 크게.
+         게임 중에는 흘끗 보는 게 전부라 작은 숫자는 없는 것과 같다. */
+      body[data-variant="minimal"] [data-hide-minimal] {
+        display: none;
+      }
+      body[data-variant="minimal"] #count {
+        margin-top: 0;
+        font-size: var(--fs-display-lg);
+        line-height: var(--lh-display-lg);
+        letter-spacing: var(--ls-display-lg);
+      }
+
+      /* 맥시멈에서만 나오는 행. 숨겨도 DOM 순번은 유지되므로 정렬이 안 깨진다. */
+      [data-max-only] {
+        display: none;
+      }
+      body[data-variant="maximum"] [data-max-only] {
+        display: block;
+      }
+    </style>
+  </head>
+  <body
+    data-variant="normal"
+    class="m-0 cursor-default select-none overflow-hidden font-sans text-overlay-text"
+  >
+    <!-- anti-card 원칙대로 표면은 하나뿐이다. 오버레이는 임의의 배경 위에 떠서
+         가독성을 위한 바탕이 반드시 필요하지만, 그 안에서 다시 박스를 나누지
+         않는다. 내부 위계는 전부 타이포와 여백이 만든다.
+
+         box-shadow 주의 — 투명 창에서는 여백(m-2 = 8px) 밖으로 나가는 것이
+         전부 잘린다. 그림자는 바깥으로 blur의 절반 + offset만큼 퍼지므로
+         반드시 그 안에 들어와야 한다. 넘기면 부드럽게 사라지지 못하고 창
+         경계에서 잘려 딱딱한 사각형으로 보인다 — 실제로 그렇게 보였다. -->
+    <div
+      class="m-2 rounded-lg border border-overlay-border bg-overlay-surface px-4 py-3.5 shadow-[0_2px_6px_rgba(0,0,0,0.45)] backdrop-blur-[14px]"
+    >
+      <p data-hide-minimal class="t-eyebrow text-overlay-text-muted">오늘</p>
+      <p
+        id="count"
+        class="t-display mt-1 tabular-nums [text-shadow:0_2px_10px_rgba(0,0,0,0.55)]"
+      >
+        0
+      </p>
+
+      <dl
+        data-hide-minimal
+        class="t-small mt-3 grid grid-cols-[1fr_auto] gap-x-3.5 gap-y-[3px] border-t border-overlay-border pt-2.5 tabular-nums text-overlay-text-muted"
+      >
+        <dt>누적</dt>
+        <dd id="total" class="text-right text-overlay-text">0</dd>
+        <dt>개인 기록</dt>
+        <dd id="best" class="text-right text-overlay-text">0</dd>
+        <dt data-max-only>이번 실행</dt>
+        <dd data-max-only id="session" class="text-right text-overlay-text">0</dd>
+        <dt data-max-only>콜백 최대</dt>
+        <dd data-max-only id="cb" class="text-right text-overlay-text">0 µs</dd>
+      </dl>
+
+      <p data-hide-minimal class="t-eyebrow mt-2.5 text-overlay-text-muted opacity-75">
+        F7 타입 · F8 표시
+      </p>
+    </div>
+
+    <script type="module" src="/src/overlay.ts"></script>
+  </body>
+</html>

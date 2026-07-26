@@ -6,28 +6,68 @@ Windows 상주 앱. **계정 없이 완결된다** — 설치하면 바로 카�
 
 기획: [docs/PLAN.md](../../docs/PLAN.md) — §4(카운팅 규칙) · §7(진입 흐름) · §10(프라이버시) · §14(로드맵)
 
+## 개발
+
+```bash
+pnpm desktop:dev
+```
+
+UI는 핫리로드된다. Rust를 고쳤을 때만 재컴파일된다.
+
+## 빌드
+
+```bash
+pnpm tauri build
+```
+
+> **`cargo build`를 단독으로 쓰지 말 것.** `tauri.conf.json`에 `devUrl`이 있어서,
+> Tauri CLI를 거치지 않고 빌드한 exe는 개발 모드로 남아 번들된 `dist` 대신
+> `http://localhost:5173`을 로드한다. Vite 서버가 없으면 창이 빈 화면(연결 거부)이
+> 된다. Rust 컴파일 확인용으로만 `cargo check`를 쓴다.
+
+첫 빌드는 rusqlite `bundled`(SQLite C 소스 동봉) 때문에 몇 분 걸린다.
+
 ## 실행
 
 ```powershell
-cd src-tauri
-cargo run --release
+Start-Process -Verb RunAs .\src-tauri\target\release\typing-rank.exe
 ```
 
 > **관리자 권한이 필요하다.** UIPI 때문에 비-elevated 훅은 관리자 권한 앱의 입력을
 > 받지 못한다 — Phase 0에서 실측 확정됐다(§11). 일반 권한으로 띄우면 대부분 동작하지만
 > 관리자 터미널 등에서 친 키가 조용히 누락된다.
 
-첫 빌드는 rusqlite `bundled`(SQLite C 소스 동봉) 때문에 몇 분 걸린다.
+창을 닫아도 종료되지 않는다(트레이로 숨는다). 종료는 트레이 메뉴에서.
+
+| 단축키 | 동작 |
+|---|---|
+| `F7` | 오버레이 표시 타입 순환 |
+| `F8` | 오버레이 표시/숨김 |
+
+단축키를 창이 아니라 **후크 경로에서** 잡는다. 게임에 포커스가 있으면 창은 키보드
+이벤트를 못 받는데, 오버레이 조작이 정작 필요한 순간이 그때다.
 
 ## 구성
 
 ```
+index.html      대시보드 엔트리 (React 19)
+overlay.html    오버레이 엔트리 (순수 TS — React 없음)
+src/
+├─ App.tsx        대시보드
+├─ overlay.ts     오버레이
+├─ snapshot.ts    Rust counter::Snapshot과 1:1 타입
+└─ styles/        Tailwind 진입점 + 디자인 토큰
 src-tauri/src/
-├─ main.rs      Tauri 조립. 스레드 3개를 잇기만 한다
-├─ hook.rs      WH_KEYBOARD_LL. 콜백은 채널 push만, 판정 없음
-├─ counter.rs   카운팅 규칙(§4) + 워치독 + 주기적 flush
-└─ store.rs     로컬 SQLite. 집계만 기록, 시퀀스 없음
+├─ main.rs        Tauri 조립. 스레드 3개를 잇기만 한다
+├─ hook.rs        WH_KEYBOARD_LL. 콜백은 채널 push만, 판정 없음
+├─ counter.rs     카운팅 규칙(§4) + 워치독 + 주기적 flush
+├─ store.rs       로컬 SQLite. 집계만 기록, 시퀀스 없음
+├─ tray.rs        동적 숫자 아이콘 + 일시정지
+└─ overlay.rs     투명 항상-위 창. 창 크기가 여기서 정해진다
 ```
+
+**오버레이에 React를 쓰지 않는다.** 게임 위에 상시 떠 있는 창이라 가벼울수록 좋고,
+하는 일이 숫자 다섯 개 갱신이라 React가 주는 게 없다. 번들 0.3kB 대 61kB.
 
 **스레드 3개는 서로를 기다리지 않는다.** 훅 콜백이 `LowLevelHooksTimeout`(기본 300ms)을
 넘기면 OS가 훅을 조용히 제거하고 시스템 전체 입력이 밀린다. Phase 0 실측 최대 79µs.
@@ -57,16 +97,29 @@ src-tauri/src/
 아니라 **훅 자체를 떼어야** 한다. 오픈소스라 유저가 이 차이를 직접 확인할 수 있고,
 그게 이 프로젝트의 신뢰 장치다.
 
-## 프론트엔드
+## 디자인
 
-지금은 정적 HTML 한 장(`ui/index.html`)이다. React 대시보드를 붙일 때
-`tauri.conf.json`의 `frontendDist`를 `../ui` → `../dist`로 바꾸고 Vite를 연결한다.
-**Rust 코어는 Node 없이 빌드·실행된다.**
+anti-card(`@freeive/anti-card`) 가이드를 따른다 — 타이포 12토큰, weight 3단계(400/500/600),
+zinc 앵커 + 단일 accent, dark/light 자동. **카드 안에 카드를 쌓지 않는다.**
+
+**색상 리터럴을 쓰지 않는다.** 컴포넌트는 의미 역할명(`text-text` · `bg-surface` ·
+`border-accent-border`)만 쓰고, 실제 값은 `src/styles/tokens.css`에 있다. 유저 테마
+선택(v2)이 그 파일만 갈아끼우면 끝나게 하기 위함이며, 리터럴이 한 군데라도 남으면
+그 자리만 색이 어긋난다.
+
+오버레이 색만 테마를 따라가지 않는다 — 임의의 배경 위에 떠서 **배경을 고를 수 없고**,
+테마를 따라 밝아지면 밝은 게임·문서 위에서 그대로 사라진다.
+
+> **투명 창의 그림자 주의.** 여백 밖으로 나가는 것은 전부 잘린다. `box-shadow`는
+> 바깥으로 blur의 절반 + offset만큼 퍼지므로 반드시 여백 안에 들어와야 한다.
+> 넘기면 부드럽게 사라지지 못하고 창 경계에서 잘려 딱딱한 사각형으로 보인다.
 
 ## 아직 없는 것 (Stage 1 진행 중)
 
-- 트레이 아이콘(동적 숫자 렌더 + 일시정지 메뉴) — 훅 API는 준비됨
-- 오버레이 (`poc/overlay` 스파이크를 본체로 이식)
-- 키보드 히트맵, React 대시보드, i18n
-- 첫 실행 화면, 단일 인스턴스, 자동 시작
+- 키보드 히트맵
+- i18n(ko/en), 첫 실행 화면
+- 일시정지 5분 옵션 (지금은 토글만)
+- 개인 기록 갱신 알림 (숫자는 보이지만 경신 순간을 알리지 않는다)
+- 앱 카테고리 수집
+- 자동 시작 (작업 스케줄러 등록 — 설치기 작업이라 Stage 4)
 - 업로드 관련 일체 (Stage 3)

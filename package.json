@@ -6,6 +6,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "desktop:dev": "pnpm --filter @typing-rank/desktop dev"
+    "desktop:dev": "pnpm --filter @typing-rank/desktop tauri dev",
+    "desktop:build": "pnpm --filter @typing-rank/desktop build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }

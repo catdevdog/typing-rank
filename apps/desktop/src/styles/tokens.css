@@ -8,35 +8,14 @@
  *   - 카드 안에 카드를 쌓지 않는다. 위계는 타이포와 여백으로 만든다
  *
  * **색상은 전부 변수다.** 유저 테마 선택(추후 기능)이 이 블록만 갈아끼우면
- * 되도록 값과 사용처를 분리했다. 지금 값은 임의 선택이며, 페이지 CSS에
- * 색상 리터럴을 직접 쓰면 그 순간 테마 기능이 깨진다 — 반드시 var()로 쓸 것.
+ * 되도록 값과 사용처를 분리했다. 컴포넌트에 색상 리터럴을 직접 쓰면 그 순간
+ * 테마 기능이 깨진다 — Tailwind 유틸리티(text-text, bg-surface …)를 쓸 것.
+ *
+ * 리셋은 여기 없다. Tailwind Preflight가 담당한다 (styles/index.css).
  *
  * 이 파일은 나중에 `packages/ui`로 옮겨 웹(랜딩·리더보드)과 공유한다.
  * 그래서 앱 고유 스타일은 여기 두지 않는다.
  * ------------------------------------------------------------------------- */
-
-/* --- 리셋 -----------------------------------------------------------------
-   anti-card는 Tailwind 기반이라 **Preflight가 깔려 있는 것을 전제**한다.
-   우리는 순수 CSS라 그게 없어서 <p>·<dl>의 기본 마진(각 1em)이 살아 있었고,
-   크기가 고정된 오버레이에서 곧바로 내용이 잘렸다. 여백은 전부 명시적으로만
-   준다 — 브라우저 기본값에 기대면 창 크기 계산이 매번 어긋난다. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-h1,
-h2,
-h3,
-h4,
-p,
-dl,
-dd,
-figure,
-blockquote {
-  margin: 0;
-}
 
 :root {
   /* OS 설정을 따른다. 유저가 명시적으로 고르면 아래 data-theme이 이긴다. */
@@ -78,14 +57,6 @@ blockquote {
   --ls-h3: -0.01em;
   --ls-eyebrow: 0.08em;
 
-  /* --- 모션 -------------------------------------------------------------- */
-  --dur-instant: 75ms;
-  --dur-fast: 150ms;
-  --dur-slow: 300ms;
-  --dur-slower: 500ms;
-  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-
   /* --- 형태 -------------------------------------------------------------- */
   --radius-sm: 6px;
   --radius: 10px;
@@ -108,8 +79,8 @@ blockquote {
   --danger-base: #dc2626;
 
   /* --- 색: 의미 역할 ------------------------------------------------------
-     페이지 CSS는 **이 아래 이름만** 쓴다. 위 원색을 직접 참조하면
-     테마 교체 시 한 군데가 남아 색이 어긋난다. */
+     컴포넌트는 **이 아래 이름만** 쓴다(Tailwind 유틸리티 경유). 위 원색을
+     직접 참조하면 테마 교체 시 한 군데가 남아 색이 어긋난다. */
   --bg: var(--zinc-0);
   --bg-subtle: var(--zinc-1);
   --surface: var(--zinc-2);
@@ -128,8 +99,7 @@ blockquote {
   /* --- 오버레이 전용 ------------------------------------------------------
      오버레이는 임의의 화면 위에 떠서 **배경을 고를 수 없다.** 테마를 따라
      밝아지면 밝은 게임·문서 위에서 그대로 사라지므로 명도를 고정한다.
-     라이트 테마 유저에게 어두운 오버레이가 뜨는 건 이 부류 앱의 통상 동작이다.
-     변수로 두었으니 테마 기능이 붙으면 여기만 갈아끼우면 된다. */
+     라이트 테마 유저에게 어두운 오버레이가 뜨는 건 이 부류 앱의 통상 동작이다. */
   --overlay-surface: rgba(12, 14, 19, 0.62);
   --overlay-border: rgba(255, 255, 255, 0.14);
   --overlay-text: #fafafa;
@@ -137,7 +107,6 @@ blockquote {
   --overlay-accent: #34d399;
 }
 
-/* OS가 다크일 때. 아래 data-theme 지정이 없으면 이게 적용된다. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --zinc-0: #09090b;
@@ -178,7 +147,12 @@ blockquote {
 }
 
 /* --- 타이포 유틸 ---------------------------------------------------------
-   12토큰을 클래스로 노출한다. 페이지에서 font-size를 직접 쓰지 않는다. */
+   12토큰을 클래스로 노출한다. 컴포넌트에서 font-size를 직접 쓰지 않는다.
+
+   `@layer components`로 감싸지 않는다 — @layer는 @tailwind 지시자와 **같은
+   파일**에 있어야 하는데, 이 파일은 packages/ui로 옮겨 웹과 공유할 토큰
+   레이어라 Tailwind 진입점과 분리돼 있다. 대신 엔트리에서 Tailwind보다
+   **나중에** import하므로 동일 특이도에서 소스 순서로 이긴다. */
 
 .t-display-lg {
   font-size: var(--fs-display-lg);
@@ -230,23 +204,8 @@ blockquote {
   line-height: var(--lh-tight);
   letter-spacing: var(--ls-eyebrow);
   text-transform: uppercase;
-  color: var(--text-subtle);
-}
-.t-eyebrow-accent {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--ls-eyebrow);
-  text-transform: uppercase;
-  color: var(--accent);
 }
 .t-code {
   font-family: var(--font-mono);
   font-size: 0.92em;
-}
-
-/* 숫자가 바뀌어도 자리가 흔들리지 않게. 카운터가 계속 갱신되는 앱이라
-   이게 없으면 화면이 미세하게 떨린다. */
-.tabular {
-  font-variant-numeric: tabular-nums;
 }

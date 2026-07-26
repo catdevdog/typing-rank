@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "identifier": "dev.typingrank.app",
   "build": {
-    "frontendDist": "../ui"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
-    "withGlobalTauri": true,
     "security": {
       "csp": null
     },

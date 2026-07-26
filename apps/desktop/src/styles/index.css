@@ -1,0 +1,5 @@
+/* Tailwind. base에 Preflight가 들어 있다 —
+   손으로 리셋을 재현하다 오버레이가 잘렸던 문제(§ overlay.rs 주석)의 정식 해법이다. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
