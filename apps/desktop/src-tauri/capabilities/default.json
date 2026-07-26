@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "대시보드 창이 Rust에서 emit한 스냅샷을 listen한다.",
+  "windows": ["dashboard"],
+  "permissions": ["core:default"]
+}

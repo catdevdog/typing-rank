@@ -1,0 +1,218 @@
+/* ---------------------------------------------------------------------------
+ * TypingRank 디자인 토큰
+ *
+ * anti-card(@freeive/anti-card)의 디자인 가이드를 따른다.
+ *   - 타이포 12토큰 / weight 3단계(400·500·600)만 사용 — 700은 쓰지 않는다
+ *   - zinc 7-step 앵커 + 단일 accent
+ *   - dark/light 자동
+ *   - 카드 안에 카드를 쌓지 않는다. 위계는 타이포와 여백으로 만든다
+ *
+ * **색상은 전부 변수다.** 유저 테마 선택(추후 기능)이 이 블록만 갈아끼우면
+ * 되도록 값과 사용처를 분리했다. 지금 값은 임의 선택이며, 페이지 CSS에
+ * 색상 리터럴을 직접 쓰면 그 순간 테마 기능이 깨진다 — 반드시 var()로 쓸 것.
+ *
+ * 이 파일은 나중에 `packages/ui`로 옮겨 웹(랜딩·리더보드)과 공유한다.
+ * 그래서 앱 고유 스타일은 여기 두지 않는다.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* OS 설정을 따른다. 유저가 명시적으로 고르면 아래 data-theme이 이긴다. */
+  color-scheme: light dark;
+
+  /* --- 타이포 ------------------------------------------------------------ */
+  /* Pretendard가 설치돼 있으면 쓰고, 없으면 시스템 폰트로 떨어진다.
+     데스크탑 앱이라 웹폰트를 원격에서 받아오지 않는다 — 오프라인에서도
+     레이아웃이 흔들리면 안 되고, 상주 앱이 네트워크를 켜는 그림도 나쁘다. */
+  --font-sans: "Pretendard Variable", Pretendard, "Segoe UI Variable Display", "Segoe UI",
+    system-ui, "Noto Sans KR", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, "D2Coding", monospace;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --fs-display-lg: clamp(2.5rem, 5vw, 4rem);
+  --fs-display: clamp(1.625rem, 3vw, 2.5rem);
+  --fs-h2: clamp(1.5rem, 2.5vw, 1.875rem);
+  --fs-h3: clamp(1.25rem, 2vw, 1.5rem);
+  --fs-h4: 1.125rem;
+  --fs-body: 0.9375rem;
+  --fs-lead-lg: 1.125rem;
+  --fs-small: 0.84rem;
+  --fs-eyebrow: 0.75rem;
+
+  --lh-display-lg: 1.05;
+  --lh-display: 1.15;
+  --lh-h2: 1.2;
+  --lh-h3: 1.3;
+  --lh-h4: 1.4;
+  --lh-body: 1.65;
+  --lh-small: 1.5;
+  --lh-tight: 1.1;
+
+  --ls-display-lg: -0.025em;
+  --ls-display: -0.015em;
+  --ls-h3: -0.01em;
+  --ls-eyebrow: 0.08em;
+
+  /* --- 모션 -------------------------------------------------------------- */
+  --dur-instant: 75ms;
+  --dur-fast: 150ms;
+  --dur-slow: 300ms;
+  --dur-slower: 500ms;
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* --- 형태 -------------------------------------------------------------- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  /* --- 색: zinc 7-step 앵커 (light) --------------------------------------- */
+  --zinc-0: #ffffff;
+  --zinc-1: #fafafa;
+  --zinc-2: #f4f4f5;
+  --zinc-3: #e4e4e7;
+  --zinc-4: #a1a1aa;
+  --zinc-5: #52525b;
+  --zinc-6: #27272a;
+
+  /* accent — 임의 선택. 유저 테마에서 바뀔 자리다. */
+  --accent-base: #10b981;
+  --accent-weak: rgba(16, 185, 129, 0.12);
+  --accent-line: rgba(16, 185, 129, 0.28);
+
+  --danger-base: #dc2626;
+
+  /* --- 색: 의미 역할 ------------------------------------------------------
+     페이지 CSS는 **이 아래 이름만** 쓴다. 위 원색을 직접 참조하면
+     테마 교체 시 한 군데가 남아 색이 어긋난다. */
+  --bg: var(--zinc-0);
+  --bg-subtle: var(--zinc-1);
+  --surface: var(--zinc-2);
+  --border: var(--zinc-3);
+  --border-strong: var(--zinc-4);
+
+  --text: var(--zinc-6);
+  --text-muted: var(--zinc-5);
+  --text-subtle: var(--zinc-4);
+
+  --accent: var(--accent-base);
+  --accent-bg: var(--accent-weak);
+  --accent-border: var(--accent-line);
+  --danger: var(--danger-base);
+}
+
+/* OS가 다크일 때. 아래 data-theme 지정이 없으면 이게 적용된다. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zinc-0: #09090b;
+    --zinc-1: #0f0f12;
+    --zinc-2: #18181b;
+    --zinc-3: #27272a;
+    --zinc-4: #71717a;
+    --zinc-5: #a1a1aa;
+    --zinc-6: #fafafa;
+
+    --accent-base: #34d399;
+    --accent-weak: rgba(52, 211, 153, 0.12);
+    --accent-line: rgba(52, 211, 153, 0.24);
+    --danger-base: #fca5a5;
+  }
+}
+
+/* 유저가 명시적으로 고른 테마 — OS 설정을 이긴다 (추후 설정 화면에서 토글). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --zinc-0: #09090b;
+  --zinc-1: #0f0f12;
+  --zinc-2: #18181b;
+  --zinc-3: #27272a;
+  --zinc-4: #71717a;
+  --zinc-5: #a1a1aa;
+  --zinc-6: #fafafa;
+
+  --accent-base: #34d399;
+  --accent-weak: rgba(52, 211, 153, 0.12);
+  --accent-line: rgba(52, 211, 153, 0.24);
+  --danger-base: #fca5a5;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* --- 타이포 유틸 ---------------------------------------------------------
+   12토큰을 클래스로 노출한다. 페이지에서 font-size를 직접 쓰지 않는다. */
+
+.t-display-lg {
+  font-size: var(--fs-display-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-display-lg);
+  letter-spacing: var(--ls-display-lg);
+}
+.t-display {
+  font-size: var(--fs-display);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
+}
+.t-h2 {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--ls-display);
+}
+.t-h3 {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-h3);
+  letter-spacing: var(--ls-h3);
+}
+.t-h4 {
+  font-size: var(--fs-h4);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-h4);
+}
+.t-body {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+}
+.t-lead-lg {
+  font-size: var(--fs-lead-lg);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+}
+.t-small {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-small);
+}
+.t-eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.t-eyebrow-accent {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.t-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* 숫자가 바뀌어도 자리가 흔들리지 않게. 카운터가 계속 갱신되는 앱이라
+   이게 없으면 화면이 미세하게 떨린다. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

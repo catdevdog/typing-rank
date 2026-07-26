@@ -1,0 +1,30 @@
+[package]
+name = "typing-rank"
+version = "0.1.0"
+edition = "2024"
+description = "TypingRank 데스크탑 클라이언트"
+license = "AGPL-3.0-only"
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+# 중복 실행 방지. 두 인스턴스가 각자 훅을 걸고 같은 SQLite에 델타를 밀어 넣으면
+# 카운트가 조용히 두 배가 된다 — 개발 중 실제로 재현됐다.
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+crossbeam-channel = "0.5.16"
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_Graphics_Gdi",
+] }
+rusqlite = { version = "0.40.1", features = ["bundled"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+
+[profile.release]
+incremental = true

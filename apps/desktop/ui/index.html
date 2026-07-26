@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>TypingRank</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      /* anti-card 원칙: 카드 안에 카드를 쌓지 않는다.
+         위계는 타이포 스케일과 여백, 얇은 구분선으로만 만든다.
+         색상 리터럴 금지 — 전부 tokens.css의 역할 변수를 쓴다. */
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+      }
+
+      main {
+        max-width: 640px;
+        padding: 44px 40px 32px;
+      }
+
+      /* --- 오늘 (주 지표) --- */
+      .today-value {
+        margin: 10px 0 0;
+        color: var(--text);
+      }
+      .today-meta {
+        margin-top: 6px;
+        color: var(--text-muted);
+      }
+
+      /* --- 지표 행: 박스가 아니라 구분선으로 나눈다 --- */
+      .stats {
+        display: flex;
+        margin-top: 40px;
+        border-top: 1px solid var(--border);
+      }
+      .stat {
+        flex: 1;
+        padding: 18px 20px 0 0;
+      }
+      .stat + .stat {
+        padding-left: 20px;
+        border-left: 1px solid var(--border);
+      }
+      .stat-value {
+        margin-top: 8px;
+        color: var(--text);
+      }
+      .stat-note {
+        margin-top: 3px;
+        color: var(--text-subtle);
+      }
+
+      /* --- 프라이버시 고지: 카드가 아니라 accent 규칙선 --- */
+      .privacy {
+        margin-top: 40px;
+        padding-left: 14px;
+        border-left: 2px solid var(--accent-border);
+        color: var(--text-muted);
+      }
+      .privacy strong {
+        font-weight: var(--fw-medium);
+        color: var(--text);
+      }
+
+      /* --- 진단 --- */
+      details {
+        margin-top: 36px;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--text-subtle);
+        list-style: none;
+        transition: color var(--dur-fast) var(--ease-enter);
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary:hover {
+        color: var(--text-muted);
+      }
+      summary::before {
+        content: "+ ";
+      }
+      details[open] summary::before {
+        content: "− ";
+      }
+      .diag {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 24px;
+        margin-top: 16px;
+        color: var(--text-muted);
+      }
+      .diag dd {
+        margin: 0;
+        text-align: right;
+        color: var(--text);
+      }
+      .bad {
+        color: var(--danger);
+      }
+      .paused {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="t-eyebrow">오늘</p>
+      <p class="t-display-lg tabular today-value" id="today">0</p>
+      <p class="t-small today-meta" id="date">—</p>
+
+      <section class="stats">
+        <div class="stat">
+          <p class="t-eyebrow">전체 누적</p>
+          <p class="t-h3 tabular stat-value" id="total">0</p>
+        </div>
+        <div class="stat">
+          <p class="t-eyebrow">개인 기록</p>
+          <p class="t-h3 tabular stat-value" id="best">0</p>
+          <p class="t-small stat-note" id="bestDate">—</p>
+        </div>
+        <div class="stat">
+          <p class="t-eyebrow">이번 실행</p>
+          <p class="t-h3 tabular stat-value" id="session">0</p>
+        </div>
+      </section>
+
+      <p class="t-small privacy">
+        랭킹에 참여하기 전에는 <strong>타이핑 데이터가 서버로 나가지 않습니다.</strong> 이 화면의
+        모든 수치는 이 PC에만 저장되며, 키가 눌린 순서와 내용은 기록되지 않습니다.
+      </p>
+
+      <details>
+        <summary class="t-small">진단</summary>
+        <dl class="diag t-small tabular">
+          <dt>auto-repeat 드롭</dt>
+          <dd id="repeat">0</dd>
+          <dt>injected 제외</dt>
+          <dd id="injected">0</dd>
+          <dt>워치독 보정</dt>
+          <dd id="watchdog">0</dd>
+          <dt>콜백 최대</dt>
+          <dd id="cb">0 µs</dd>
+          <dt>콜백 호출</dt>
+          <dd id="calls">0</dd>
+          <dt>훅 재설치</dt>
+          <dd id="reinstalls">0</dd>
+          <dt>이벤트 유실</dt>
+          <dd id="dropped">0</dd>
+          <dt>일시정지</dt>
+          <dd id="pausedState">아니오</dd>
+        </dl>
+      </details>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const n = (v) => v.toLocaleString();
+
+      function paint(s) {
+        $("today").textContent = n(s.today);
+        $("total").textContent = n(s.total);
+        $("best").textContent = n(s.best_day);
+        $("bestDate").textContent = s.best_day_date || "아직 없음";
+        $("session").textContent = n(s.session);
+
+        $("repeat").textContent = n(s.repeat_dropped);
+        $("injected").textContent = n(s.injected);
+        $("watchdog").textContent = n(s.watchdog_fixed);
+        $("cb").textContent = n(s.max_cb_us) + " µs";
+        $("calls").textContent = n(s.cb_calls);
+        $("reinstalls").textContent = n(s.reinstalls);
+
+        const dropped = $("dropped");
+        dropped.textContent = n(s.dropped);
+        dropped.classList.toggle("bad", s.dropped > 0);
+
+        const paused = $("pausedState");
+        paused.textContent = s.paused ? "예 — 후크 해제됨" : "아니오";
+        paused.classList.toggle("paused", s.paused);
+      }
+
+      $("date").textContent = new Date().toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long",
+      });
+
+      window.__TAURI__.event.listen("snapshot", (e) => paint(e.payload));
+    </script>
+  </body>
+</html>
