@@ -175,15 +175,36 @@ fn render_paused() -> Vec<u8> {
     rgba
 }
 
+/// 트레이 메뉴에서 상태를 되비추는 항목들.
+///
+/// `CheckMenuItem`을 여러 개 관리해야 하는데 Tauri 상태는 타입으로 찾으므로
+/// 하나로 묶는다. 따로 `manage`하면 둘 중 하나만 잡힌다.
+pub struct MenuItems<R: Runtime> {
+    pause: CheckMenuItem<R>,
+    overlay: CheckMenuItem<R>,
+}
+
 /// 트레이를 만든다. 반환된 핸들로 아이콘·툴팁을 갱신한다.
 pub fn build<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<TrayIcon<R>> {
     let open = MenuItem::with_id(app, "open", "대시보드 열기", true, None::<&str>)?;
+    let overlay = CheckMenuItem::with_id(
+        app,
+        "overlay",
+        "오버레이 표시 (F8)",
+        true,
+        crate::overlay::current(app.handle()).visible,
+        None::<&str>,
+    )?;
+    let variant = MenuItem::with_id(app, "variant", "오버레이 타입 변경 (F7)", true, None::<&str>)?;
     let pause = CheckMenuItem::with_id(app, "pause", "일시정지", true, false, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
             &open,
+            &PredefinedMenuItem::separator(app)?,
+            &overlay,
+            &variant,
             &PredefinedMenuItem::separator(app)?,
             &pause,
             &PredefinedMenuItem::separator(app)?,
@@ -200,6 +221,8 @@ pub fn build<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<TrayIcon<R>> {
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "open" => show_dashboard(app),
+            "overlay" => crate::overlay::toggle_visible(app),
+            "variant" => crate::overlay::cycle_variant(app),
             "pause" => {
                 let hook = app.state::<HookHandle>();
                 // CheckMenuItem의 표시 상태가 아니라 훅의 실제 상태를 뒤집는다.
@@ -226,7 +249,7 @@ pub fn build<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<TrayIcon<R>> {
         })
         .build(app)?;
 
-    app.manage(pause);
+    app.manage(MenuItems { pause, overlay });
     Ok(tray)
 }
 
@@ -257,8 +280,10 @@ pub fn update<R: Runtime>(app: &AppHandle<R>, tray: &TrayIcon<R>, snap: &Snapsho
     };
     let _ = tray.set_tooltip(Some(&tip));
 
-    // 메뉴 체크 표시를 훅의 실제 상태에 맞춘다.
-    if let Some(item) = app.try_state::<CheckMenuItem<R>>() {
-        let _ = item.set_checked(snap.paused);
+    // 메뉴 체크 표시를 실제 상태에 맞춘다. 메뉴가 스스로 토글하게 두면
+    // "정지했는데 세고 있다" 같은 어긋남이 생긴다.
+    if let Some(items) = app.try_state::<MenuItems<R>>() {
+        let _ = items.pause.set_checked(snap.paused);
+        let _ = items.overlay.set_checked(crate::overlay::current(app).visible);
     }
 }

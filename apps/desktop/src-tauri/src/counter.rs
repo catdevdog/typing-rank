@@ -27,6 +27,21 @@ const WATCHDOG_INTERVAL: Duration = Duration::from_secs(1);
 /// 사람이 1초 넘게 누르고 있는 키는 auto-repeat 대상이지 유실이 아니다.
 const STUCK_THRESHOLD: Duration = Duration::from_secs(1);
 
+/// 오버레이 단축키.
+///
+/// 게임에 포커스가 있으면 창은 키보드 이벤트를 못 받는데, 오버레이 조작이
+/// 정작 필요한 순간이 그때다. 그래서 창 단축키가 아니라 **후크 경로에서**
+/// 잡는다. auto-repeat 판정을 이미 거친 자리라 꾹 눌러도 한 번만 발동한다.
+const SC_F7: u16 = 0x41;
+const SC_F8: u16 = 0x42;
+
+/// 카운팅과 함께 흘러나오는 조작 신호. 카운트 자체는 정상적으로 올라간다 —
+/// 단축키라고 해서 입력이 아닌 것은 아니다 (§4 "모든 키 포함").
+pub enum Hotkey {
+    CycleOverlayVariant,
+    ToggleOverlay,
+}
+
 /// 대시보드·트레이·오버레이가 함께 보는 단일 상태.
 #[derive(Serialize, Clone, Default, PartialEq, Eq)]
 pub struct Snapshot {
@@ -96,30 +111,31 @@ impl State {
         }
     }
 
-    fn apply(&mut self, ev: &RawEvent) {
+    /// 이벤트 하나를 반영하고, 그것이 단축키였다면 조작 신호를 돌려준다.
+    fn apply(&mut self, ev: &RawEvent) -> Option<Hotkey> {
         let i = ev.key as usize;
         if i >= KEY_SLOTS {
-            return;
+            return None;
         }
 
         if ev.injected {
             if ev.down {
                 self.snap.injected += 1;
             }
-            return;
+            return None;
         }
 
         if !ev.down {
             self.down[i] = false;
             self.last_down_at[i] = None;
-            return;
+            return None;
         }
 
         // 저수준 훅에는 repeat 플래그가 없다. 키 상태 테이블을 직접 유지해
         // "이미 down인 키의 keydown"을 auto-repeat으로 판정한다 (§4).
         if self.down[i] {
             self.snap.repeat_dropped += 1;
-            return;
+            return None;
         }
 
         self.down[i] = true;
@@ -135,6 +151,12 @@ impl State {
         if self.snap.today > self.snap.best_day {
             self.snap.best_day = self.snap.today;
             self.snap.best_day_date = self.date.clone();
+        }
+
+        match ev.key {
+            SC_F7 => Some(Hotkey::CycleOverlayVariant),
+            SC_F8 => Some(Hotkey::ToggleOverlay),
+            _ => None,
         }
     }
 
@@ -164,9 +186,10 @@ impl State {
     }
 }
 
-/// 집계 스레드를 띄우고 스냅샷 채널을 돌려준다.
-pub fn start(events: Receiver<RawEvent>, mut store: Store) -> Receiver<Snapshot> {
+/// 집계 스레드를 띄우고 (스냅샷, 단축키) 채널을 돌려준다.
+pub fn start(events: Receiver<RawEvent>, mut store: Store) -> (Receiver<Snapshot>, Receiver<Hotkey>) {
     let (snap_tx, snap_rx) = unbounded::<Snapshot>();
+    let (key_tx, key_rx) = unbounded::<Hotkey>();
 
     std::thread::spawn(move || {
         let mut st = State::new(&store, local_date());
@@ -178,13 +201,21 @@ pub fn start(events: Receiver<RawEvent>, mut store: Store) -> Receiver<Snapshot>
             // 1) 채널을 먼저 비운다. 워치독보다 반드시 앞이어야 대기 중인
             //    keyup을 앞질러 보는 일이 없다 (STUCK_THRESHOLD와 함께 이중 방어).
             match events.recv_timeout(Duration::from_millis(100)) {
-                Ok(ev) => st.apply(&ev),
+                Ok(ev) => {
+                    if let Some(hk) = st.apply(&ev) {
+                        let _ = key_tx.send(hk);
+                    }
+                }
                 Err(RecvTimeoutError::Timeout) => {}
                 Err(RecvTimeoutError::Disconnected) => break,
             }
             loop {
                 match events.try_recv() {
-                    Ok(ev) => st.apply(&ev),
+                    Ok(ev) => {
+                        if let Some(hk) = st.apply(&ev) {
+                            let _ = key_tx.send(hk);
+                        }
+                    }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => return,
                 }
@@ -227,7 +258,7 @@ pub fn start(events: Receiver<RawEvent>, mut store: Store) -> Receiver<Snapshot>
         flush(&mut st, &mut store);
     });
 
-    snap_rx
+    (snap_rx, key_rx)
 }
 
 fn flush(st: &mut State, store: &mut Store) {

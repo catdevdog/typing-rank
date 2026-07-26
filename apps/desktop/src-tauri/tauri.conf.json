@@ -19,6 +19,22 @@
         "height": 560,
         "resizable": true,
         "center": true
+      },
+      {
+        "label": "overlay",
+        "url": "overlay.html",
+        "title": "TypingRank Overlay",
+        "width": 300,
+        "height": 200,
+        "x": 40,
+        "y": 40,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "focus": false
       }
     ]
   },

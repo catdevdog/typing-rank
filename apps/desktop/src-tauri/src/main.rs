@@ -14,6 +14,7 @@
 
 mod counter;
 mod hook;
+mod overlay;
 mod store;
 mod tray;
 
@@ -54,7 +55,7 @@ fn main() {
     };
 
     let (hook_handle, events) = hook::start();
-    let snapshots = counter::start(events, store);
+    let (snapshots, hotkeys) = counter::start(events, store);
 
     // 창이 뜬 직후 한 번 그려 주기 위한 최신값 보관소.
     let latest = Arc::new(Mutex::new(counter::Snapshot::default()));
@@ -78,6 +79,7 @@ fn main() {
         .on_page_load(move |webview, _| {
             let snap = load_latest.lock().unwrap().clone();
             let _ = webview.emit("snapshot", snap);
+            let _ = webview.emit("overlay-state", overlay::current(webview.app_handle()));
         })
         .setup(move |app| {
             // 일시정지(트레이)에서 쓴다 — PLAN.md §10.
@@ -97,8 +99,24 @@ fn main() {
                 }
             });
 
+            // 트레이가 오버레이의 현재 상태를 읽으므로 순서를 지킨다.
+            overlay::init(app)?;
             let tray = tray::build(app)?;
             let handle = app.handle().clone();
+
+            // 단축키는 후크 경로에서 온다 — 게임에 포커스가 있으면 창은 키를
+            // 못 받는데, 오버레이 조작이 정작 필요한 순간이 그때다.
+            let hotkey_handle = handle.clone();
+            std::thread::spawn(move || {
+                for hk in hotkeys {
+                    match hk {
+                        counter::Hotkey::ToggleOverlay => overlay::toggle_visible(&hotkey_handle),
+                        counter::Hotkey::CycleOverlayVariant => {
+                            overlay::cycle_variant(&hotkey_handle)
+                        }
+                    }
+                }
+            });
 
             std::thread::spawn(move || {
                 let mut last_tray = Instant::now() - TRAY_UPDATE_INTERVAL;
@@ -116,7 +134,9 @@ fn main() {
                         last_paused = Some(snap.paused);
                     }
 
-                    if window.emit("snapshot", snap).is_err() {
+                    // 창 하나가 아니라 앱 전체로 보낸다. 대시보드와 오버레이가
+                    // **같은 스냅샷**을 봐야 둘이 다른 숫자를 띄우는 순간이 없다.
+                    if handle.emit("snapshot", snap).is_err() {
                         return;
                     }
                 }
